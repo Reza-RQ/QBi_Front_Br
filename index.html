@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Crypto | QBi</title>
+   
+    <style>
+        /* Inline styles for debugging */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #game-poster {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('TemplateData/POSTER.png');
+            background-size: cover;
+            background-position: center;
+            display: block;
+            z-index: 1;
+        }
+        #loading-bar-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #ccc;
+            z-index: 2;
+            display: block;
+        }
+        #loading-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(to right, pink, cyan); /* Rainbow colors */
+            border-radius: 10px; /* Rounded corners */
+        }
+        #unity-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        #unity-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #231F20;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Game Poster as Background -->
+    <div id="game-poster"></div>
+
+    <!-- Loading Bar -->
+    <div id="loading-bar-container">
+        <div id="loading-bar"></div>
+    </div>
+
+    <!-- Unity Game Container -->
+    <div id="unity-container" class="unity-desktop">
+        <canvas id="unity-canvas" tabindex="-1"></canvas>
+    </div>
+
+    <script>
+    console.log("Loading script started");
+    console.log("Checking TelegramEnvironment");
+
+    function checkTelegramEnvironment() {
+
+    
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData)
+        {
+            Telegram.WebApp.ready();  // Let Telegram know the app is ready
+            Telegram.WebApp.expand(); // Request full-screen mode
+            return;
+        }
+        else    
+        {
+            // Redirect to the Telegram bot URL if accessed from another browser
+            window.location.href = "https://t.me/cubetto_coin_bot";
+            return; // Ensure no further code runs
+        }
+    }
+    // Call the function to check and redirect if necessary
+    checkTelegramEnvironment();
+    const projectName = "QBi"
+    var canvas = document.querySelector("#unity-canvas");
+
+    // Ensure the poster and loading bar are visible
+    document.getElementById("game-poster").style.display = "block";
+    document.getElementById("loading-bar-container").style.display = "block";
+
+    console.log("Game poster and loading bar are displayed");
+
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        console.log("Detected mobile device");
+
+        // Mobile device style: fill the whole browser client area with the game canvas:
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        canvas.style.position = "fixed";
+
+        document.body.style.textAlign = "left";
+    } else {
+        console.log("Detected desktop device");
+
+        // Desktop style
+        window.addEventListener('resize', resizeCanvas);
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+    }
+
+    console.log("Setting up Unity loader script");
+
+    // Dynamically get the project name from the path
+    var loaderScript = document.createElement("script");
+    loaderScript.src = `Build/${projectName}.loader.js`;  // Use the variable for the project name
+
+    // Function to determine if compression is enabled
+    function getFileExtension() {
+        return (/* Check if compression is enabled */ true) ? '.br' : ''; // Modify this condition based on how you determine compression
+    }
+
+    const fileExtension = getFileExtension();
+
+    loaderScript.onload = () => {
+        console.log("Loader script loaded");
+
+        // Now that the loader script is loaded, create the Unity instance
+        createUnityInstance(canvas, {
+            dataUrl: `Build/${projectName}.data${fileExtension}`,  // Use the dynamic project name and extension
+            frameworkUrl: `Build/${projectName}.framework.js${fileExtension}`,  // Use the dynamic project name and extension
+            codeUrl: `Build/${projectName}.wasm${fileExtension}`,  // Use the dynamic project name and extension
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: projectName,  // Use the dynamic project name
+            productVersion: "1.0",
+        }, (progress) => {
+            console.log("Loading progress: " + progress * 100 + "%");
+            document.querySelector("#loading-bar").style.width = (progress * 100) + "%";
+        }).then((unityInstance) => {
+            console.log("Unity instance created");
+            document.getElementById("loading-bar-container").style.display = "none"; // Hide loading bar when done
+            document.getElementById("game-poster").style.display = "none"; // Hide game poster when done
+                      // Make the Unity instance globally accessible
+            window.unityInstance = unityInstance;  // Expose the unityInstance globally
+
+        }).catch((message) => {
+            console.error("Error creating Unity instance: " + message);
+        });
+    };
+
+    document.body.appendChild(loaderScript);
+
+    </script>
+</body>
+</html>
